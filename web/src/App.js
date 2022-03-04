@@ -2,20 +2,26 @@ import "./App.css";
 import React, { Component, useEffect, useRef, useState } from "react";
 
 import io from "socket.io-client";
+import Video from "./components/Video";
 
 class App extends Component {
   constructor(props) {
     super(props);
 
-    this.localVideoref = React.createRef();
-    this.remoteVideoref = React.createRef();
+    this.state = { localStream: null, remoteStream: null };
+
+    // this.localVideoref = React.createRef();
+    // this.remoteVideoref = React.createRef();
     this.textRef = React.createRef();
     this.socket = null;
     this.candidates = [];
   }
 
   componentDidMount() {
-    this.socket = io("/webrtcPeer", { path: "/webrtc", query: {} });
+    this.socket = io("https://5cea-196-47-128-163.ngrok.io/webrtcPeer", {
+      path: "/webrtc",
+      query: {},
+    });
 
     this.socket.on("connection-success", (success) => {
       console.log("Connection success", success);
@@ -49,13 +55,15 @@ class App extends Component {
     };
 
     this.pc.onaddstream = (e) => {
-      this.remoteVideoref.current.srcObject = e.stream;
+      // this.remoteVideoref.current.srcObject = e.stream;
+      this.setState({ remoteStream: e.stream });
     };
 
     const success = (stream) => {
       window.localStream = stream;
-      this.localVideoref.current.srcObject = stream;
+      // this.localVideoref.current.srcObject = stream;
       this.pc.addStream(stream);
+      this.setState({ localStream: stream });
     };
 
     const failure = (e) => {
@@ -63,7 +71,7 @@ class App extends Component {
     };
 
     navigator.mediaDevices
-      .getUserMedia(constraints)
+      .getUserMedia({ audio: false, video: true })
       .then(success)
       .catch(failure);
   }
@@ -112,39 +120,42 @@ class App extends Component {
   render() {
     return (
       <div>
-        <video
-          style={{
-            width: 240,
-            height: 240,
+        <Video
+          videoStyle={{
+            zIndex: 2,
+            position: "fixed",
+            right: 0,
+            width: 200,
+            height: 200,
             margin: 5,
             backgroundColor: "black",
           }}
-          ref={this.localVideoref}
+          videoStream={this.state.localStream}
           autoPlay
-        ></video>
-        <video
-          style={{
-            width: 240,
-            height: 240,
-            margin: 5,
-            backgroundColor: "black",
-          }}
-          ref={this.remoteVideoref}
-          autoPlay
-        ></video>
-        <button onClick={this.createOffer}>Offer</button>
-        <button onClick={this.createAnswer}>Answer</button>
-        <br />
-        <textarea
-          ref={(ref) => {
-            this.textRef = ref;
-          }}
+          muted
         />
-        {/* <br />
-        <button onClick={this.setRemoteDescription}>
-          Set Remote Description
-        </button>
-        <button onClick={this.addCandidate}>Add Candidate</button> */}
+        <Video
+          videoStyle={{
+            zIndex: 1,
+            position: "fixed",
+            bottom: 0,
+            minWidth: "100%",
+            minHeight: "100%",
+            backgroundColor: "black",
+          }}
+          videoStream={this.state.remoteStream}
+          autoPlay
+        />
+        <div style={{ zIndex: 1, position: "fixed" }}>
+          <button onClick={this.createOffer}>Offer</button>
+          <button onClick={this.createAnswer}>Answer</button>
+          <br />
+          <textarea
+            ref={(ref) => {
+              this.textRef = ref;
+            }}
+          />
+        </div>
       </div>
     );
   }
